@@ -12,7 +12,7 @@
           </v-btn>
       </v-flex>
 
-      <v-flex xs12 lg6>
+      <v-flex xs6 lg6>
         <v-menu
           ref="menu1"
           :close-on-content-click="false"
@@ -37,7 +37,7 @@
         </v-menu>
       </v-flex>
 
-      <v-flex>
+      <v-flex xs3 lg3>
           <v-btn ref="verifyBtn" :color="color"
             :loading="loading"
             :disabled="loading || nodate"
