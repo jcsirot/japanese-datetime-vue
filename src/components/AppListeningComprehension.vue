@@ -3,7 +3,7 @@
   <v-container grid-list-md>
 
     <v-layout row wrap align-center justify-center fill-height>
-      <v-flex xs3 lg3>
+      <v-flex xs2 lg2>
           <v-btn color="primary"
                 :disabled="playing"
                  @click.native="play()">
@@ -52,7 +52,7 @@
           </v-btn>
       </v-flex>
 
-      <v-flex xs1 lg1>
+      <v-flex xs2 lg2>
           <v-btn color="primary"
             class="white--text"
             v-if="result=='success'"
@@ -76,7 +76,9 @@ export default {
     loading: false,
     //color: "primary",
     playing: false,
-    result: ""
+    result: "",
+    audioBuffer1: null,
+    audioBuffer2: null
   }),
 
   computed: {
@@ -145,6 +147,8 @@ export default {
     },
     generateDate() {
       this.date = null;
+      this.audioBuffer1 = null;
+      this.audioBuffer2 = null;
       let start = new Date(1950, 1, 1);
       let end = new Date(2049, 12, 31);
       this.generatedDate = new Date(
@@ -154,34 +158,38 @@ export default {
     },
     play() {
       let context = new AudioContext();
-      let dayUrl =
-        "./audio/" +
-        (this.generatedDate.getMonth() + 1) +
-        "_" +
-        this.generatedDate.getDate() +
-        ".mp3";
-      let yearUrl = "./audio/" + this.generatedDate.getFullYear() + ".mp3";
-      Promise.all([
-        this.$http.get(yearUrl, { responseType: "arraybuffer" }),
-        this.$http.get(dayUrl, { responseType: "arraybuffer" })
-      ])
-        .then(responses => {
-          context.decodeAudioData(responses[0].body, buffer1 =>
-            context.decodeAudioData(responses[1].body, buffer2 =>
-              this.playBuffer(context, buffer1, buffer2)
-            )
-          );
-        })
-        .catch(responses => {
-          console.error("Loading audio failed");
-          console.log(responses);
-        });
+      if (this.audioBuffer1 == null || this.audioBuffer2 == null) {
+        let dayUrl = `./audio/${this.generatedDate.getMonth() +
+          1}_${this.generatedDate.getDate()}.mp3`;
+        let yearUrl = `./audio/${this.generatedDate.getFullYear()}.mp3`;
+        Promise.all([
+          this.$http.get(yearUrl, { responseType: "arraybuffer" }),
+          this.$http.get(dayUrl, { responseType: "arraybuffer" })
+        ])
+          .then(responses => {
+            context.decodeAudioData(responses[0].body, buffer1 =>
+              context.decodeAudioData(responses[1].body, buffer2 => {
+                this.audioBuffer1 = buffer1;
+                this.audioBuffer2 = buffer2;
+                this.playBuffer(context, buffer1, buffer2);
+              })
+            );
+          })
+          .catch(responses => {
+            console.error("Loading audio failed");
+            console.log(responses);
+          });
+      } else {
+        this.playBuffer(context, this.audioBuffer1, this.audioBuffer2);
+      }
     },
 
     playBuffer(context, buffer1, buffer2) {
-      var source = context.createBufferSource(); // creates a sound source
+      this.playing = true;
+      let source = context.createBufferSource(); // creates a sound source
       source.buffer = this._appendBuffer(context, buffer1, buffer2); // tell the source which sound to play
       source.connect(context.destination); // connect the source to the context's destination (the speakers)
+      source.addEventListener("ended", _ => (this.playing = false));
       source.start(0); // play the source now
     },
 
